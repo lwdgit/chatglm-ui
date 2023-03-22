@@ -1,0 +1,14 @@
+{
+  "name": "@gradio/client",
+  "version": "0.0.1",
+  "description": "Gradio UI packages",
+  "type": "module",
+  "main": "src/index.ts",
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "dependencies": {
+    "@types/websocket": "^1.0.5",
+    "websocket": "^1.0.34"
+  }
+}

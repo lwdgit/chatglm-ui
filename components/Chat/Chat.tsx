@@ -46,7 +46,7 @@ export const Chat: FC<Props> = ({ conversation, models, messageIsStreaming, mode
             {conversation.messages.length === 0 ? (
               <>
                 <div className="flex flex-col mx-auto pt-12 space-y-10 w-[350px] sm:w-[600px]">
-                  <div className="text-4xl text-center text-neutral-600 dark:text-neutral-200">{models.length === 0 ? "Loading..." : "Chatbot UI"}</div>
+                  <div className="text-4xl text-center text-neutral-600 dark:text-neutral-200">ChatGLM 聊天助手</div>
 
                   {models.length > 0 && (
                     <div className="flex flex-col h-full space-y-4 border p-4 rounded border-neutral-500">
@@ -66,7 +66,15 @@ export const Chat: FC<Props> = ({ conversation, models, messageIsStreaming, mode
               </>
             ) : (
               <>
-                <div className="flex justify-center py-2 text-neutral-500 bg-neutral-100 dark:bg-[#444654] dark:text-neutral-200 text-sm border border-b-neutral-300 dark:border-none">Model: {conversation.model.name}</div>
+                <div style={{
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    backdropFilter: 'blur(20px)',
+    background: 'transparent',
+    boxShadow: 'rgb(0 0 0 / 10%) 0px 2px 2px'
+}}
+className="flex justify-center py-2 text-neutral-500 bg-neutral-100 dark:bg-[#444654] dark:text-neutral-200 text-sm border border-b-neutral-300 dark:border-none">ChatGLM 聊天助手</div>
 
                 {conversation.messages.map((message, index) => (
                   <ChatMessage

@@ -1,5 +1,5 @@
 import { Message, OpenAIModel, OpenAIModelID } from "@/types";
-import { IconSend } from "@tabler/icons-react";
+import { IconDots, IconSend } from "@tabler/icons-react";
 import { FC, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 interface Props {
@@ -91,7 +91,7 @@ export const ChatInput: FC<Props> = ({ onSend, messageIsStreaming, model }) => {
         className="absolute right-5 bottom-[18px] focus:outline-none text-neutral-800 hover:text-neutral-900 dark:text-neutral-100 dark:hover:text-neutral-200 dark:bg-opacity-50 hover:bg-neutral-200 p-1 rounded-sm"
         onClick={handleSend}
       >
-        <IconSend size={18} />
+        {messageIsStreaming ? <IconDots className="animate-pulse" size={18} /> : <IconSend size={18} />}
       </button>
     </div>
   );

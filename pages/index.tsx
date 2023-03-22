@@ -52,15 +52,19 @@ export default function Home() {
         prompt: updatedConversation.prompt
       };
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chatglm", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(chatBody)
+        body: JSON.stringify({
+          messages: updatedConversation.messages,
+        })
+      }).catch(e => {
+        setMessageIsStreaming(false);
       });
 
-      if (!response.ok) {
+      if (!response?.ok) {
         setLoading(false);
         setMessageIsStreaming(false);
         setMessageError(true);
@@ -90,7 +94,11 @@ export default function Home() {
         done = doneReading;
         const chunkValue = decoder.decode(value);
 
-        text += chunkValue;
+        // text += chunkValue;
+        text = chunkValue.replace(/�/g, '');
+        if (!text.length) {
+          break;
+        }
 
         if (isFirst) {
           isFirst = false;
@@ -297,13 +305,13 @@ export default function Home() {
       });
     }
 
-    fetchModels(apiKey);
+    //fetchModels(apiKey);
   }, []);
 
   return (
     <>
       <Head>
-        <title>Chatbot UI</title>
+        <title>ChatGLM 智能聊天机器人</title>
         <meta
           name="description"
           content="ChatGPT but better."
