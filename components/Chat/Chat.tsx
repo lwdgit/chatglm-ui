@@ -30,7 +30,7 @@ export const Chat: FC<Props> = ({ conversation, models, messageIsStreaming, mode
 
   useEffect(() => {
     scrollToBottom();
-  }, [conversation.messages]);
+  }, [messageIsStreaming]);
 
   return (
     <div className="relative flex-1 overflow-none dark:bg-[#343541]">
