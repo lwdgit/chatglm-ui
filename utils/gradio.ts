@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import throttle from 'lodash.throttle';
 import { client } from "./client/src/client";
 import { Message } from "@/types";
 
@@ -19,13 +20,14 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
       throw new Error("content can't be empty");
     }
 
-    const app = await client('http://127.0.0.1:8080', session_hash);
-    const handleData = (event: any) => {
+    const app = await client('http://127.0.0.1:7860', session_hash);
+    const handleData = throttle((event: any) => {
       const lastContent = event.data.reverse().find((content: any) => content?.visible).value;
+      console.log('lastContent', lastContent);
       res.write(lastContent);
       // @ts-ignore
       res.flush();
-    };
+    }, 500);
 
     let hasSend = false;
     const handleStatus = (event: any) => {
