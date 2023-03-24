@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import throttle from 'lodash.throttle';
 import { client } from "./client/src/client";
 import { Message } from "@/types";
 
@@ -21,12 +20,11 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     }
 
     const app = await client('http://aigc.alibaba.net', session_hash);
-    const handleData = throttle((event: any) => {
+    const handleData = (event: any) => {
       const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      res.write(lastContent);
-      // @ts-ignore
-      res.flush();
-    }, 500);
+      console.log(lastContent);
+      res.write(lastContent + '\n\n');
+    };
 
     let hasSend = false;
     const handleStatus = (event: any) => {
