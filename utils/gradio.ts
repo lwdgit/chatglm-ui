@@ -2,27 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { client } from "./client/src/client";
 import { Message } from "@/types";
 
-const throttle = (func: Function, limit: number) => {
-  let lastFunc:number;
-  let lastRan: number;
-  return function(...args: any[]) {
-    // @ts-ignore
-    const context = this;
-    if (!lastRan) {
-      func.apply(context, args)
-      lastRan = Date.now();
-    } else {
-      clearTimeout(lastFunc);
-      lastFunc = setTimeout(function() {
-        if ((Date.now() - lastRan) >= limit) {
-          func.apply(context, args);
-          lastRan = Date.now();
-        }
-      }, limit - (Date.now() - lastRan)) as unknown as number;
-    }
-  }
-}
-
 export const GradioStream = async (messages: Message[], req: NextApiRequest, res: NextApiResponse, session_hash: string = Math.random().toString(36).substring(2)) => {
   return new Promise(async (resolve) => {
     const message = messages.pop();
@@ -41,12 +20,11 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     }
 
     const app = await client('http://127.0.0.1:7860', session_hash);
-    const handleData = throttle((event: any) => {
+    const handleData = (event: any) => {
       const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      res.write(lastContent);
-      // @ts-ignore
-      res.flush();
-    }, 500);
+      console.log(lastContent);
+      res.write(lastContent + '\n\n');
+    };
 
     let hasSend = false;
     const handleStatus = (event: any) => {
