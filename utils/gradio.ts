@@ -1,7 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import throttle from 'lodash.throttle';
 import { client } from "./client/src/client";
 import { Message } from "@/types";
+
+const throttle = (func: Function, limit: number) => {
+  let lastFunc:number;
+  let lastRan: number;
+  return function(...args: any[]) {
+    // @ts-ignore
+    const context = this;
+    if (!lastRan) {
+      func.apply(context, args)
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(function() {
+        if ((Date.now() - lastRan) >= limit) {
+          func.apply(context, args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan)) as unknown as number;
+    }
+  }
+}
 
 export const GradioStream = async (messages: Message[], req: NextApiRequest, res: NextApiResponse, session_hash: string = Math.random().toString(36).substring(2)) => {
   return new Promise(async (resolve) => {
