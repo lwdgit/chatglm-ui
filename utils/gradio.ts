@@ -20,7 +20,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
       throw new Error("content can't be empty");
     }
 
-    const app = await client('http://127.0.0.1:7860', session_hash);
+    const app = await client('http://aigc.alibaba.net', session_hash);
     const handleData = throttle((event: any) => {
       const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
       res.write(lastContent);
