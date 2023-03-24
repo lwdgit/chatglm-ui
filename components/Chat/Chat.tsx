@@ -1,5 +1,5 @@
 import { Conversation, KeyValuePair, Message, OpenAIModel } from "@/types";
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, MutableRefObject, useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import { ChatLoader } from "./ChatLoader";
 import { ChatMessage } from "./ChatMessage";
@@ -10,6 +10,8 @@ import { SystemPrompt } from "./SystemPrompt";
 interface Props {
   conversation: Conversation;
   models: OpenAIModel[];
+  apiKey: string;
+  isUsingEnv: boolean;
   messageIsStreaming: boolean;
   modelError: boolean;
   messageError: boolean;
@@ -17,24 +19,69 @@ interface Props {
   lightMode: "light" | "dark";
   onSend: (message: Message, isResend: boolean) => void;
   onUpdateConversation: (conversation: Conversation, data: KeyValuePair) => void;
+  onAcceptEnv: (accept: boolean) => void;
+  stopConversationRef: MutableRefObject<boolean>;
 }
 
-export const Chat: FC<Props> = ({ conversation, models, messageIsStreaming, modelError, messageError, loading, lightMode, onSend, onUpdateConversation }) => {
+export const Chat: FC<Props> = ({ conversation, models, apiKey, isUsingEnv, messageIsStreaming, modelError, messageError, loading, lightMode, onSend, onUpdateConversation, onAcceptEnv, stopConversationRef }) => {
   const [currentMessage, setCurrentMessage] = useState<Message>();
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    if (autoScrollEnabled) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScroll = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const bottomTolerance = 30;
+
+      if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
+        setAutoScrollEnabled(false);
+      } else {
+        setAutoScrollEnabled(true);
+      }
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messageIsStreaming]);
+    textareaRef.current?.focus();
+  }, [conversation.messages]);
+
+  useEffect(() => {
+    const chatContainer = chatContainerRef.current;
+
+    if (chatContainer) {
+      chatContainer.addEventListener("scroll", handleScroll);
+
+      return () => {
+        chatContainer.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, []);
 
   return (
-    <div className="relative flex-1 overflow-none dark:bg-[#343541]">
-      {modelError ? (
+    <div className="relative flex-1 overflow-none dark:bg-[#343541] bg-white">
+      {!apiKey && !isUsingEnv ? (
+        <div className="flex flex-col justify-center mx-auto h-full w-[300px] sm:w-[500px] space-y-6">
+          <div className="text-2xl font-semibold text-center text-gray-800 dark:text-gray-100">OpenAI API Key Required</div>
+          <div className="text-center text-gray-500 dark:text-gray-400">Please set your OpenAI API key in the bottom left of the sidebar.</div>
+          <div className="text-center text-gray-500 dark:text-gray-400">- OR -</div>
+          <button
+            className="flex items-center justify-center mx-auto px-4 py-2 border border-transparent text-xs rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            onClick={() => onAcceptEnv(true)}
+          >
+            click if using a .env.local file
+          </button>
+        </div>
+      ) : modelError ? (
         <div className="flex flex-col justify-center mx-auto h-full w-[300px] sm:w-[500px] space-y-6">
           <div className="text-center text-red-500">Error fetching models.</div>
           <div className="text-center text-red-500">Make sure your OpenAI API key is set in the bottom left of the sidebar or in a .env.local file and refresh.</div>
@@ -42,7 +89,10 @@ export const Chat: FC<Props> = ({ conversation, models, messageIsStreaming, mode
         </div>
       ) : (
         <>
-          <div className="overflow-scroll max-h-full">
+          <div
+            className="overflow-scroll max-h-full"
+            ref={chatContainerRef}
+          >
             {conversation.messages.length === 0 ? (
               <>
                 <div className="flex flex-col mx-auto pt-12 space-y-10 w-[350px] sm:w-[600px]">
@@ -86,7 +136,7 @@ className="flex justify-center py-2 text-neutral-500 bg-neutral-100 dark:bg-[#44
                 {loading && <ChatLoader />}
 
                 <div
-                  className="bg-white dark:bg-[#343541] h-[113px] sm:h-[162px]"
+                  className="bg-white dark:bg-[#343541] h-[162px]"
                   ref={messagesEndRef}
                 />
               </>
@@ -103,6 +153,8 @@ className="flex justify-center py-2 text-neutral-500 bg-neutral-100 dark:bg-[#44
             />
           ) : (
             <ChatInput
+              stopConversationRef={stopConversationRef}
+              textareaRef={textareaRef}
               messageIsStreaming={messageIsStreaming}
               onSend={(message) => {
                 setCurrentMessage(message);

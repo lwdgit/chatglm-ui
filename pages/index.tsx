@@ -1,16 +1,18 @@
 import { Chat } from "@/components/Chat/Chat";
 import { Navbar } from "@/components/Mobile/Navbar";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { ChatBody, Conversation, KeyValuePair, Message, OpenAIModel, OpenAIModelID, OpenAIModels } from "@/types";
+import { ChatBody, ChatFolder, Conversation, KeyValuePair, Message, OpenAIModel, OpenAIModelID, OpenAIModels } from "@/types";
 import { cleanConversationHistory, cleanSelectedConversation } from "@/utils/app/clean";
 import { DEFAULT_SYSTEM_PROMPT } from "@/utils/app/const";
 import { saveConversation, saveConversations, updateConversation } from "@/utils/app/conversation";
-import { exportConversations, importConversations } from "@/utils/app/data";
+import { saveFolders } from "@/utils/app/folders";
+import { exportData, importData } from "@/utils/app/importExport";
 import { IconArrowBarLeft, IconArrowBarRight } from "@tabler/icons-react";
 import Head from "next/head";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
+  const [folders, setFolders] = useState<ChatFolder[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation>();
   const [loading, setLoading] = useState<boolean>(false);
@@ -21,6 +23,9 @@ export default function Home() {
   const [apiKey, setApiKey] = useState<string>("");
   const [messageError, setMessageError] = useState<boolean>(false);
   const [modelError, setModelError] = useState<boolean>(false);
+  const [isUsingEnv, setIsUsingEnv] = useState<boolean>(false);
+
+  const stopConversationRef = useRef<boolean>(false);
 
   const handleSend = async (message: Message, isResend: boolean) => {
     if (selectedConversation) {
@@ -53,11 +58,13 @@ export default function Home() {
         prompt: updatedConversation.prompt
       };
 
+      const controller = new AbortController();
       const response = await fetch("/api/chatglm", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: updatedConversation.messages,
         })
@@ -82,6 +89,16 @@ export default function Home() {
         return;
       }
 
+      if (updatedConversation.messages.length === 1) {
+        const { content } = message;
+        const customName = content.length > 30 ? content.substring(0, 30) + "..." : content;
+
+        updatedConversation = {
+          ...updatedConversation,
+          name: customName
+        };
+      }
+
       setLoading(false);
 
       const reader = data.getReader();
@@ -91,6 +108,11 @@ export default function Home() {
       let text = "";
 
       while (!done) {
+        if (stopConversationRef.current === true) {
+          controller.abort();
+          done = true;
+          break;
+        }
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         const chunkValue = decoder.decode(value);
@@ -156,6 +178,7 @@ export default function Home() {
   };
 
   const fetchModels = async (key: string) => {
+    return;
     const response = await fetch("/api/models", {
       method: "POST",
       headers: {
@@ -179,6 +202,7 @@ export default function Home() {
     }
 
     setModels(data);
+    setModelError(false);
   };
 
   const handleLightMode = (mode: "dark" | "light") => {
@@ -191,19 +215,74 @@ export default function Home() {
     localStorage.setItem("apiKey", apiKey);
   };
 
-  const handleExportConversations = () => {
-    exportConversations();
+  const handleEnvChange = (isUsingEnv: boolean) => {
+    setIsUsingEnv(isUsingEnv);
+    localStorage.setItem("isUsingEnv", isUsingEnv.toString());
   };
 
-  const handleImportConversations = (conversations: Conversation[]) => {
-    importConversations(conversations);
-    setConversations(conversations);
-    setSelectedConversation(conversations[conversations.length - 1]);
+  const handleExportData = () => {
+    exportData();
+  };
+
+  const handleImportConversations = (data: { conversations: Conversation[]; folders: ChatFolder[] }) => {
+    importData(data.conversations, data.folders);
+    setConversations(data.conversations);
+    setSelectedConversation(data.conversations[data.conversations.length - 1]);
+    setFolders(data.folders);
   };
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     saveConversation(conversation);
+  };
+
+  const handleCreateFolder = (name: string) => {
+    const lastFolder = folders[folders.length - 1];
+
+    const newFolder: ChatFolder = {
+      id: lastFolder ? lastFolder.id + 1 : 1,
+      name
+    };
+
+    const updatedFolders = [...folders, newFolder];
+
+    setFolders(updatedFolders);
+    saveFolders(updatedFolders);
+  };
+
+  const handleDeleteFolder = (folderId: number) => {
+    const updatedFolders = folders.filter((f) => f.id !== folderId);
+    setFolders(updatedFolders);
+    saveFolders(updatedFolders);
+
+    const updatedConversations: Conversation[] = conversations.map((c) => {
+      if (c.folderId === folderId) {
+        return {
+          ...c,
+          folderId: 0
+        };
+      }
+
+      return c;
+    });
+    setConversations(updatedConversations);
+    saveConversations(updatedConversations);
+  };
+
+  const handleUpdateFolder = (folderId: number, name: string) => {
+    const updatedFolders = folders.map((f) => {
+      if (f.id === folderId) {
+        return {
+          ...f,
+          name
+        };
+      }
+
+      return f;
+    });
+
+    setFolders(updatedFolders);
+    saveFolders(updatedFolders);
   };
 
   const handleNewConversation = () => {
@@ -214,7 +293,8 @@ export default function Home() {
       name: `Conversation ${lastConversation ? lastConversation.id + 1 : 1}`,
       messages: [],
       model: OpenAIModels[OpenAIModelID.GPT_3_5],
-      prompt: DEFAULT_SYSTEM_PROMPT
+      prompt: DEFAULT_SYSTEM_PROMPT,
+      folderId: 0
     };
 
     const updatedConversations = [...conversations, newConversation];
@@ -242,7 +322,8 @@ export default function Home() {
         name: "New conversation",
         messages: [],
         model: OpenAIModels[OpenAIModelID.GPT_3_5],
-        prompt: DEFAULT_SYSTEM_PROMPT
+        prompt: DEFAULT_SYSTEM_PROMPT,
+        folderId: 0
       });
       localStorage.removeItem("selectedConversation");
     }
@@ -269,9 +350,16 @@ export default function Home() {
       name: "New conversation",
       messages: [],
       model: OpenAIModels[OpenAIModelID.GPT_3_5],
-      prompt: DEFAULT_SYSTEM_PROMPT
+      prompt: DEFAULT_SYSTEM_PROMPT,
+      folderId: 0
     });
     localStorage.removeItem("selectedConversation");
+
+    setFolders([]);
+    localStorage.removeItem("folders");
+
+    setIsUsingEnv(false);
+    localStorage.removeItem("isUsingEnv");
   };
 
   useEffect(() => {
@@ -279,6 +367,12 @@ export default function Home() {
       setShowSidebar(false);
     }
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (apiKey) {
+      fetchModels(apiKey);
+    }
+  }, [apiKey]);
 
   useEffect(() => {
     const theme = localStorage.getItem("theme");
@@ -289,10 +383,22 @@ export default function Home() {
     const apiKey = localStorage.getItem("apiKey") || "";
     if (apiKey) {
       setApiKey(apiKey);
+      fetchModels(apiKey);
+    }
+
+    const usingEnv = localStorage.getItem("isUsingEnv");
+    if (usingEnv) {
+      setIsUsingEnv(usingEnv === "true");
+      fetchModels("");
     }
 
     if (window.innerWidth < 640) {
       setShowSidebar(false);
+    }
+
+    const folders = localStorage.getItem("folders");
+    if (folders) {
+      setFolders(JSON.parse(folders));
     }
 
     const conversationHistory = localStorage.getItem("conversationHistory");
@@ -313,11 +419,12 @@ export default function Home() {
         name: "New conversation",
         messages: [],
         model: OpenAIModels[OpenAIModelID.GPT_3_5],
-        prompt: DEFAULT_SYSTEM_PROMPT
+        prompt: DEFAULT_SYSTEM_PROMPT,
+        folderId: 0
       });
     }
 
-    //fetchModels(apiKey);
+    fetchModels(apiKey);
   }, []);
 
   return (
@@ -338,7 +445,7 @@ export default function Home() {
         />
       </Head>
       {selectedConversation && (
-        <div className={`flex flex-col h-screen w-screen text-white dark:text-white text-sm ${lightMode}`}>
+        <main className={`flex flex-col h-screen w-screen text-white dark:text-white text-sm ${lightMode}`}>
           <div className="sm:hidden w-full fixed top-0">
             <Navbar
               selectedConversation={selectedConversation}
@@ -346,7 +453,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="flex h-full w-full pt-[48px] sm:pt-0">
+          <article className="flex h-full w-full pt-[48px] sm:pt-0">
             {showSidebar ? (
               <>
                 <Sidebar
@@ -355,7 +462,11 @@ export default function Home() {
                   lightMode={lightMode}
                   selectedConversation={selectedConversation}
                   apiKey={apiKey}
+                  folders={folders}
                   onToggleLightMode={handleLightMode}
+                  onCreateFolder={handleCreateFolder}
+                  onDeleteFolder={handleDeleteFolder}
+                  onUpdateFolder={handleUpdateFolder}
                   onNewConversation={handleNewConversation}
                   onSelectConversation={handleSelectConversation}
                   onDeleteConversation={handleDeleteConversation}
@@ -363,7 +474,7 @@ export default function Home() {
                   onUpdateConversation={handleUpdateConversation}
                   onApiKeyChange={handleApiKeyChange}
                   onClearConversations={handleClearConversations}
-                  onExportConversations={handleExportConversations}
+                  onExportConversations={handleExportData}
                   onImportConversations={handleImportConversations}
                 />
 
@@ -382,6 +493,8 @@ export default function Home() {
             <Chat
               conversation={selectedConversation}
               messageIsStreaming={messageIsStreaming}
+              apiKey={apiKey}
+              isUsingEnv
               modelError={modelError}
               messageError={messageError}
               models={models}
@@ -389,9 +502,11 @@ export default function Home() {
               lightMode={lightMode}
               onSend={handleSend}
               onUpdateConversation={handleUpdateConversation}
+              onAcceptEnv={handleEnvChange}
+              stopConversationRef={stopConversationRef}
             />
-          </div>
-        </div>
+          </article>
+        </main>
       )}
     </>
   );

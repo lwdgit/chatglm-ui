@@ -23,7 +23,6 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     const app = await client('http://127.0.0.1:7860', session_hash);
     const handleData = throttle((event: any) => {
       const lastContent = event.data.reverse().find((content: any) => content?.visible).value;
-      console.log('lastContent', lastContent);
       res.write(lastContent);
       // @ts-ignore
       res.flush();
