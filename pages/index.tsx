@@ -62,7 +62,8 @@ export default function Home() {
       const response = await fetch("/api/chatglm", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-Content-Stream": '1',
         },
         signal: controller.signal,
         body: JSON.stringify({

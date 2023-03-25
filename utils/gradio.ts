@@ -18,15 +18,18 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     if (!message) {
       throw new Error("content can't be empty");
     }
-
     const app = await client('http://127.0.0.1:7860', session_hash);
+    const isStream = req.headers['x-content-stream'];
+    let hasSend = false;
+    let lastBuffer = Buffer.from('');
     const handleData = (event: any) => {
       const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      console.log(lastContent);
-      res.write(lastContent + '\n\n');
+      lastBuffer = Buffer.from(lastContent);
+      if (isStream) {
+        res.write(lastContent + '\n\n');
+      }
     };
 
-    let hasSend = false;
     const handleStatus = (event: any) => {
       if (event.status === 'generating') {
         if (!hasSend) {
@@ -53,8 +56,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
           resolve(false);
         }
       } else if (event.status === 'complete') {
-      	handleData(event);
-        res.end();
+        res.end(lastBuffer);
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
