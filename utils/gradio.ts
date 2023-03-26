@@ -2,6 +2,18 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { client } from "./client/src/client";
 import { Message } from "@/types";
 
+function throttle(func: Function, time: number) {
+  let prevTime = 0;
+  return (...args: any) => {
+    let nowTime = Date.now();
+    if (nowTime - prevTime >= time) {
+      // @ts-ignore
+      func.apply(this, args);
+      prevTime = nowTime;
+    } 
+  };
+}
+
 export const GradioStream = async (messages: Message[], req: NextApiRequest, res: NextApiResponse, session_hash: string = Math.random().toString(36).substring(2)) => {
   return new Promise(async (resolve) => {
     const message = messages.pop();
@@ -22,11 +34,12 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;
     let lastBuffer = Buffer.from('');
+    const write = throttle(res.write, 500).bind(res);
     const handleData = (event: any) => {
       const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
       lastBuffer = Buffer.from(lastContent);
       if (isStream) {
-        res.write(lastContent + '\n\n');
+        write(lastBuffer + '\n\n');
       }
     };
 
@@ -38,7 +51,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
             Connection: 'keep-alive',
             'Content-Encoding': 'none',
             'Cache-Control': 'no-cache',
-            'Content-Type': 'text/event-stream',
+            'Content-Type': 'text/event-stream; charset=utf-8',
           });
         }
       } else if (event.status === 'error') {

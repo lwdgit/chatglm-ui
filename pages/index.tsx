@@ -117,14 +117,13 @@ export default function Home() {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         const chunkValue = decoder.decode(value);
-	console.log('value', chunkValue);
         // text += chunkValue;
         text = chunkValue.replace(/�/g, '');
         if (!text.length) {
           break;
         }
 
-        console.log('text', text);
+        console.log('text', text.length);
         if (isFirst) {
           isFirst = false;
           const updatedMessages: Message[] = [...updatedConversation.messages, { role: "assistant", content: chunkValue }];
