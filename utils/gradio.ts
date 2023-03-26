@@ -2,7 +2,26 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { client } from "./client/src/client";
 import { Message } from "@/types";
 
-export const GradioStream = async (messages: Message[], req: NextApiRequest, res: NextApiResponse, session_hash: string = Math.random().toString(36).substring(2)) => {
+function throttle(func: Function, time: number) {
+  let prevTime = 0;
+  return (...args: any) => {
+    let nowTime = Date.now();
+    if (nowTime - prevTime >= time) {
+      // @ts-ignore
+      func.apply(this, args);
+      prevTime = nowTime;
+    } 
+  };
+}
+
+export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) => {
+  const { messages = [], max_length = 2048, top_p = 0.7, temperature = 0.95, session_hash = Math.random().toString(36).substring(2) } = req.body as unknown as {
+    messages: Message[],
+    session_hash?: string;
+    top_p?: number;
+    max_length?: number;
+    temperature?: number;
+  };
   return new Promise(async (resolve) => {
     const message = messages.pop();
     const history = (messages || []).slice(-10)
@@ -18,15 +37,18 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     if (!message) {
       throw new Error("content can't be empty");
     }
-
     const app = await client('http://aigc.alibaba.net', session_hash);
+    const isStream = req.headers['x-content-stream'];
+    let hasSend = false;
+    let lastContent = '';  
+    const write = throttle(res.write, 500).bind(res);
     const handleData = (event: any) => {
-      const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      console.log(lastContent);
-      res.write(lastContent + '\n\n');
+      lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
+      if (isStream) {
+        write(lastContent + '\n\n');
+      }
     };
 
-    let hasSend = false;
     const handleStatus = (event: any) => {
       if (event.status === 'generating') {
         if (!hasSend) {
@@ -35,7 +57,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
             Connection: 'keep-alive',
             'Content-Encoding': 'none',
             'Cache-Control': 'no-cache',
-            'Content-Type': 'text/event-stream',
+            'Content-Type': 'text/event-stream; charset=utf-8',
           });
         }
       } else if (event.status === 'error') {
@@ -53,8 +75,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
           resolve(false);
         }
       } else if (event.status === 'complete') {
-      	handleData(event);
-        res.end();
+        res.end(lastContent);
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
@@ -66,7 +87,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
 
     app.predict('', {
       fn_index: 0,
-      data: [message.content, 2048, 0.7, 0.95, JSON.stringify(history)],
+      data: [message.content, max_length, top_p, temperature, JSON.stringify(history)],
     });
 
     req.connection.once('close', () => {
