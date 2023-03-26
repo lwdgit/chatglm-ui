@@ -49,4 +49,4 @@ with gr.Blocks() as demo:
             history = gr.TextArea(visible=False)
             button = gr.Button("Generate")
     button.click(predict, [txt, max_length, top_p, temperature, history, state], [state] + text_boxes, queue=True)
-demo.queue(concurrency_count=10).launch(share=False, inbrowser=True, enable_queue=True, max_threads=2, server_name="0.0.0.0", server_port=7860)
+demo.queue(concurrency_count=10).launch(share=False, inbrowser=True, enable_queue=True, max_threads=2, server_name="0.0.0.0", server_port=9999)
