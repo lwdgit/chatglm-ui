@@ -1,6 +1,6 @@
 {
-  "OpenAI API Key Required": "需要 OpenAI API 密钥",
-  "Please set your OpenAI API key in the bottom left of the sidebar.": "请在侧边栏左下角设置您的 OpenAI API 密钥。",
+  "OpenAI API Key Required": "欢迎使用 ChatGLM",
+  "Please set your OpenAI API key in the bottom left of the sidebar.": "",
   "Stop Generating": "停止生成",
   "Prompt limit is {{maxLength}} characters": "提示字数限制为 {{maxLength}} 个字符",
   "System Prompt": "系统提示",
