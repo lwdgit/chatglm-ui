@@ -14,7 +14,14 @@ function throttle(func: Function, time: number) {
   };
 }
 
-export const GradioStream = async (messages: Message[], req: NextApiRequest, res: NextApiResponse, session_hash: string = Math.random().toString(36).substring(2)) => {
+export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) => {
+  const { messages = [], max_length = 2048, top_p = 0.7, temperature = 0.95, session_hash = Math.random().toString(36).substring(2) } = req.body as unknown as {
+    messages: Message[],
+    session_hash?: string;
+    top_p?: number;
+    max_length?: number;
+    temperature?: number;
+  };
   return new Promise(async (resolve) => {
     const message = messages.pop();
     const history = (messages || []).slice(-10)
@@ -33,13 +40,12 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
     const app = await client('http://127.0.0.1:7860', session_hash);
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;
-    let lastBuffer = Buffer.from('');
+    let lastContent = '';  
     const write = throttle(res.write, 500).bind(res);
     const handleData = (event: any) => {
-      const lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      lastBuffer = Buffer.from(lastContent);
+      lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
       if (isStream) {
-        write(lastBuffer + '\n\n');
+        write(lastContent + '\n\n');
       }
     };
 
@@ -69,7 +75,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
           resolve(false);
         }
       } else if (event.status === 'complete') {
-        res.end(lastBuffer);
+        res.end(lastContent);
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
@@ -81,7 +87,7 @@ export const GradioStream = async (messages: Message[], req: NextApiRequest, res
 
     app.predict('', {
       fn_index: 0,
-      data: [message.content, 2048, 0.7, 0.95, JSON.stringify(history)],
+      data: [message.content, max_length, top_p, temperature, JSON.stringify(history)],
     });
 
     req.connection.once('close', () => {
