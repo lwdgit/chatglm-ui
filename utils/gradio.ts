@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { client } from "./client/src/client";
-import { Message } from "@/types";
+import { Message } from "@/types/chat";
 
 function throttle(func: Function, time: number) {
   let prevTime = 0;

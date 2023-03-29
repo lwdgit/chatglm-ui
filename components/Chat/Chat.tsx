@@ -194,7 +194,7 @@ export const Chat: FC<Props> = memo(
                 <>
                   <div className="mx-auto flex w-[350px] flex-col space-y-10 pt-12 sm:w-[600px]">
                     <div className="text-center text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                      {models.length === 0 ? (
+                      {models.length !== 0 ? (
                         <div>
                           <Spinner size="16px" className="mx-auto" />
                         </div>
@@ -234,13 +234,14 @@ export const Chat: FC<Props> = memo(
               ) : (
                 <>
                   <div className="flex justify-center border border-b-neutral-300 bg-neutral-100 py-2 text-sm text-neutral-500 dark:border-none dark:bg-[#444654] dark:text-neutral-200">
-                    {t('Model')}: {conversation.model.name}
+                    ChatGLM 聊天助手
+                    {/*{t('Model')}: {conversation.model.name}
                     <button
                       className="ml-2 cursor-pointer hover:opacity-50"
                       onClick={handleSettings}
                     >
                       <IconSettings size={18} />
-                    </button>
+                    </button>*/}
                     <button
                       className="ml-2 cursor-pointer hover:opacity-50"
                       onClick={onClearAll}
