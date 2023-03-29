@@ -37,7 +37,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
     if (!message) {
       throw new Error("content can't be empty");
     }
-    const app = await client('http://aigc.alibaba.net', session_hash);
+    const app = await client('http://127.0.0.1:9999', session_hash);
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;
     let lastContent = '';  

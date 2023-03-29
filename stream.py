@@ -1,7 +1,7 @@
 from transformers import AutoModel, AutoTokenizer
 import gradio as gr
 import json
-model_path = '../chatglm'
+model_path = '../chatglm-6b'
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 model = AutoModel.from_pretrained(model_path, trust_remote_code=True).half().float()
 model = model.eval()
