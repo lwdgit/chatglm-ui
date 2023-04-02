@@ -45,9 +45,9 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
     //const write = throttle(res.write, 500).bind(res);
     const handleData = (event: any) => {
       lastContent = (event.data?.reverse().find((content: any) => content?.visible).value || '').replace(/�/g, '');
-      if (isStream, lastContent.length > lastContentLen) {
-        // res.write(lastContent.slice(lastContentLen) + '\n\n');
+      if (isStream && lastContent.length > lastContentLen) {
         res.write(lastContent.slice(lastContentLen));
+	// @ts-ignore
 	res.flush();
 	lastContentLen = lastContent.length;
       }
