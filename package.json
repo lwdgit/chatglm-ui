@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 8080",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start --port 8080",
+    "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
     "test": "vitest",
@@ -26,10 +26,11 @@
     "react-syntax-highlighter": "^15.5.0",
     "rehype-mathjax": "^4.0.2",
     "remark-gfm": "^3.0.1",
-    "typescript": "4.9.5",
-    "websocket": "^1.0.34",
     "remark-math": "^5.1.1",
-    "uuid": "^9.0.0"
+    "typescript": "4.9.5",
+    "uuid": "^9.0.0",
+    "vite": "^4.2.1",
+    "websocket": "^1.0.34"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
