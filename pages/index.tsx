@@ -160,13 +160,11 @@ const Home: React.FC<HomeProps> = ({
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         const chunkValue = decoder.decode(value);
-        // text += chunkValue;
-        text = chunkValue.replace(/�/g, '');
+        text += chunkValue;
         if (!text.length) {
           break;
         }
 
-        console.log('text', text.length);
         if (isFirst) {
           isFirst = false;
           const updatedMessages: Message[] = [

@@ -40,12 +40,16 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
     const app = await client('http://127.0.0.1:9999', session_hash);
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;
-    let lastContent = '';  
-    const write = throttle(res.write, 500).bind(res);
+    let lastContent = '';
+    let lastContentLen = 0;
+    //const write = throttle(res.write, 500).bind(res);
     const handleData = (event: any) => {
-      lastContent = event.data?.reverse().find((content: any) => content?.visible).value;
-      if (isStream) {
-        write(lastContent + '\n\n');
+      lastContent = (event.data?.reverse().find((content: any) => content?.visible).value || '').replace(/�/g, '');
+      if (isStream, lastContent.length > lastContentLen) {
+        // res.write(lastContent.slice(lastContentLen) + '\n\n');
+        res.write(lastContent.slice(lastContentLen));
+	res.flush();
+	lastContentLen = lastContent.length;
       }
     };
 
@@ -55,7 +59,6 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
           hasSend = true;
           res.writeHead(200, {
             Connection: 'keep-alive',
-            'Content-Encoding': 'none',
             'Cache-Control': 'no-cache',
             'Content-Type': 'text/event-stream; charset=utf-8',
           });
@@ -75,7 +78,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
           resolve(false);
         }
       } else if (event.status === 'complete') {
-        res.end(lastContent);
+        res.end(lastContent.slice(lastContentLen));
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
