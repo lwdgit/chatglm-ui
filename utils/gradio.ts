@@ -39,6 +39,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
       throw new Error("content can't be empty");
     }
     const app = await client('http://127.0.0.1:9999', session_hash);
+    const chatId = Math.random().toString(36).substring(2);
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;
     let lastContent = '';
@@ -62,6 +63,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
             Connection: 'keep-alive',
             'Cache-Control': 'no-cache',
             'Content-Type': 'text/event-stream; charset=utf-8',
+            'x-chatid': String(chatId),
           });
         }
       } else if (event.status === 'error') {
@@ -80,7 +82,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
         }
       } else if (event.status === 'complete') {
         res.end(lastContent.slice(lastContentLen));
-	fs.promises.appendFile('./data.json', JSON.stringify({input: message.content, output: lastContent}) + '\n', 'utf-8')
+	fs.promises.writeFile(`./prompts/${chatId}.json`, JSON.stringify({input: message.content, output: lastContent}) + '\n', 'utf-8');
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
