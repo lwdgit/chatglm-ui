@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import fs from 'fs';
 import { client } from "./client/src/client";
 import { Message } from "@/types/chat";
 
@@ -79,6 +80,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
         }
       } else if (event.status === 'complete') {
         res.end(lastContent.slice(lastContentLen));
+	fs.promises.appendFile('./data.json', JSON.stringify({input: message.content, output: lastContent}) + '\n', 'utf-8')
         app.off('data', handleData);
         app.off('status', handleStatus);
         resolve(true);
