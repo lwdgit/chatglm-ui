@@ -16,12 +16,13 @@ function throttle(func: Function, time: number) {
 }
 
 export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { messages = [], max_length = 2048, top_p = 0.7, temperature = 0.95, session_hash = Math.random().toString(36).substring(2) } = req.body as unknown as {
+const { messages = [], max_length = 2048, top_p = 0.7, temperature = 0.95, session_hash = Math.random().toString(36).substring(2), server = 'http://127.0.0.1:9999' } = req.body as unknown as {
     messages: Message[],
     session_hash?: string;
     top_p?: number;
     max_length?: number;
     temperature?: number;
+    server?: string;
   };
   return new Promise(async (resolve) => {
     const message = messages.pop();
@@ -38,7 +39,7 @@ export const GradioStream = async (req: NextApiRequest, res: NextApiResponse) =>
     if (!message) {
       throw new Error("content can't be empty");
     }
-    const app = await client('http://127.0.0.1:9999', session_hash);
+    const app = await client(server, session_hash);
     const chatId = Math.random().toString(36).substring(2);
     const isStream = req.headers['x-content-stream'];
     let hasSend = false;

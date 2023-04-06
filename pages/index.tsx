@@ -100,11 +100,12 @@ const Home: React.FC<HomeProps> = ({
       setLoading(true);
       setMessageIsStreaming(true);
 
-      const chatBody: ChatBody = {
+      const chatBody: any = {
         model: updatedConversation.model,
         messages: updatedConversation.messages,
         key: apiKey,
         prompt: updatedConversation.prompt,
+        server: new URL(location.href).searchParams.get('server') || undefined,
       };
 
       const controller = new AbortController();
